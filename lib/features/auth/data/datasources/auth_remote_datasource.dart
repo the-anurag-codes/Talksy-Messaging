@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../models/user_model.dart';
 import '../../../../../core/errors/exceptions.dart';
@@ -71,6 +72,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (updatedUser == null) {
         throw const ServerException('Failed to get updated user');
       }
+
+      // Create user document in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(updatedUser.uid)
+          .set({
+            'displayName': displayName,
+            'email': email,
+            'isOnline': true,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastSeen': FieldValue.serverTimestamp(),
+          });
 
       return UserModel.fromFirebaseUser(updatedUser);
     } on firebase_auth.FirebaseAuthException catch (e) {
