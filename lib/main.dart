@@ -1,7 +1,6 @@
 import 'package:aura_chat_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:aura_chat_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:aura_chat_app/features/auth/presentation/screens/login_screen.dart';
-import 'package:aura_chat_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
