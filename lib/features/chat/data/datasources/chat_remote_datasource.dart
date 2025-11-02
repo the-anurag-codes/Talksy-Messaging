@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/chat_model.dart';
 import '../../../../core/errors/exceptions.dart';
 
@@ -112,7 +113,9 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
         });
       }
     } catch (e) {
-      print('Failed to send typing indicator: $e');
+      if (kDebugMode) {
+        print('Failed to send typing indicator: $e');
+      }
     }
   }
 
@@ -147,9 +150,10 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   Future<void> markMessageAsRead(String messageId) async {
     try {
       // Implementation for read receipts
-      // You can update the message status here
     } catch (e) {
-      print('Failed to mark message as read: $e');
+      if (kDebugMode) {
+        print('Failed to mark message as read: $e');
+      }
     }
   }
 }
