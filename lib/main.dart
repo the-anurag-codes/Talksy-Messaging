@@ -1,22 +1,25 @@
-import 'package:aura_chat_app/features/auth/data/datasources/auth_remote_datasource.dart';
-import 'package:aura_chat_app/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:aura_chat_app/features/auth/presentation/screens/login_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:aura_chat_app/features/chat/presentation/screens/chat_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'features/auth/domain/repositories/auth_repository.dart';
-import 'features/auth/domain/usecases/get_current_user_usecase.dart';
-import 'features/auth/domain/usecases/sign_in_usecase.dart';
-import 'features/auth/domain/usecases/sign_out_usecase.dart';
-import 'features/auth/domain/usecases/sign_up_usecase.dart';
-import 'features/auth/presentation/bloc/auth_event.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'core/di/injection_container.dart' as di;
+import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/auth/presentation/bloc/auth_state.dart';
+import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/chat/presentation/bloc/chat_bloc.dart';
+import 'features/chat/presentation/bloc/chat_list_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
   await Firebase.initializeApp();
+
+  // Initialize dependency injection
+  await di.init();
+
   runApp(const MyApp());
 }
 
@@ -25,34 +28,43 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firebaseAuth = FirebaseAuth.instance;
-
-    final authRemoteDataSource = AuthRemoteDataSourceImpl(firebaseAuth);
-    final AuthRepository authRepository = AuthRepositoryImpl(
-      authRemoteDataSource,
-    );
-
-    final signInUseCase = SignInUseCase(authRepository);
-    final signUpUseCase = SignUpUseCase(authRepository);
-    final signOutUseCase = SignOutUseCase(authRepository);
-    final getCurrentUserUseCase = GetCurrentUserUseCase(authRepository);
-
-    final authBloc = AuthBloc(
-      signInUseCase: signInUseCase,
-      signUpUseCase: signUpUseCase,
-      signOutUseCase: signOutUseCase,
-      getCurrentUserUseCase: getCurrentUserUseCase,
-    )..add(AuthCheckRequested());
-
     return MultiBlocProvider(
-      providers: [BlocProvider<AuthBloc>.value(value: authBloc)],
+      providers: [
+        BlocProvider<AuthBloc>(
+          create: (context) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
+        ),
+        BlocProvider<ChatListBloc>(create: (context) => di.sl<ChatListBloc>()),
+        BlocProvider<ChatBloc>(create: (context) => di.sl<ChatBloc>()),
+      ],
       child: MaterialApp(
         title: 'Talksy - Chat & Messaging',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        ),
-        home: LoginScreen(),
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.light,
+        home: const AuthWrapper(),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state.status == AuthStatus.authenticated) {
+          return const ChatListScreen();
+        } else if (state.status == AuthStatus.unauthenticated ||
+            state.status == AuthStatus.error) {
+          return const LoginScreen();
+        }
+
+        // Loading state
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      },
     );
   }
 }

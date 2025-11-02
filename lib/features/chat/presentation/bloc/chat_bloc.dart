@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/message_entity.dart';
@@ -47,7 +48,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         ).listen((result) {
           result.fold(
             (failure) {
-              add(ChatMessagesUpdated(const []));
+              add(const ChatMessagesUpdated([]));
             },
             (messages) {
               add(ChatMessagesUpdated(messages));
@@ -94,12 +95,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     result.fold(
       (failure) {
-        // Handle error - could show a snackbar
-        print('Failed to send message: ${failure.message}');
+        debugPrint('Failed to send message: ${failure.message}');
       },
       (_) {
         // Message sent successfully
-        // Firestore stream will automatically update the UI
       },
     );
   }

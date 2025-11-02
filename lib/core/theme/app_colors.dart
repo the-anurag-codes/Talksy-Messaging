@@ -9,4 +9,10 @@ class AppColors {
   static const Color textPrimary = Color(0xFF2D3436);
   static const Color textSecondary = Color(0xFF636E72);
   static const Color divider = Color(0xFFDFE6E9);
+
+  // Message colors
+  static const Color sentMessageBg = Color(0xFF0084FF);
+  static const Color receivedMessageBg = Color(0xFFE4E6EB);
+  static const Color sentMessageText = Colors.white;
+  static const Color receivedMessageText = Color(0xFF050505);
 }
