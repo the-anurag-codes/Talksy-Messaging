@@ -22,12 +22,22 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState.user != null) {
       context.read<ChatListBloc>().add(ChatListStarted(authState.user!.id));
+
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+        }
+      });
     }
   }
 
@@ -81,11 +91,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
         body: BlocBuilder<ChatListBloc, ChatListState>(
           builder: (context, state) {
-            if (state.status == ChatListStatus.loading) {
+            if (!_isInitialized && state.status == ChatListStatus.loading) {
               return _buildLoadingState();
             }
 
-            if (state.chatRooms.isEmpty) {
+            // Show empty state
+            if (state.chatRooms.isEmpty && _isInitialized) {
               return _buildEmptyState(context);
             }
 
