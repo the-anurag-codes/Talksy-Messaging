@@ -1,16 +1,69 @@
-# talksy
+# Chat Application - Flutter
 
-A new Flutter project.
+A professional chat application built with **Clean Architecture**, **BLoC** pattern, and **SOLID principles**.
 
-## Getting Started
+## Architecture
 
-This project is a starting point for a Flutter application.
+This project follows **Clean Architecture** with clear separation of concerns:
 
-A few resources to get you started if this is your first Flutter project:
+```
+lib/
+├── core/                   # Core utilities and base classes
+│   ├── constants/          # App-wide constants
+│   ├── errors/             # Error handling (Failures & Exceptions)
+│   ├── theme/              # Theme configuration
+│   └── di/                 # Dependency injection setup
+│
+├── features/               # Feature modules
+│   ├── auth/               # Authentication feature
+│   │   ├── data/           # Data layer
+│   │   │   ├── datasources/    # Remote data sources (Firebase)
+│   │   │   ├── models/         # Data models
+│   │   │   └── repositories/   # Repository implementations
+│   │   ├── domain/         # Domain layer
+│   │   │   ├── entities/       # Business entities
+│   │   │   ├── repositories/   # Repository interfaces
+│   │   │   └── usecases/       # Business logic use cases
+│   │   └── presentation/   # Presentation layer
+│   │       ├── bloc/           # BLoC state management
+│   │       ├── pages/          # UI screens
+│   │       └── widgets/        # Reusable widgets
+│   │
+│   └── chat/               # Chat feature 
+│       ├── data/
+│       ├── domain/
+│       └── presentation/
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Authentication
+- Email & Password authentication via **Firebase Auth**
+- Form validation with error handling
+- Secure session management
+- Auto-login on app restart
+- Sign out functionality
+
+### Real-time Chat
+- **Firebase Real Time Database** connection using Firabase
+- Real-time message delivery
+- Message status indicators (Sending, Sent, Delivered, Failed)
+- Typing indicators
+- Optimistic UI updates
+- Message bubbles with timestamps
+- Empty state handling
+- Auto-scroll to latest message
+
+### State Management
+- **BLoC pattern** with clear event/state separation
+- Immutable state using Equatable
+- Stream-based reactive programming
+- Error handling in BLoC layer
+
+### Clean Code Practices
+- **SOLID principles** implementation
+- **Dependency Injection** with GetIt
+- Repository pattern for data abstraction
+- Use case pattern for business logic
+- Clear separation of concerns
+- Modular and testable code
