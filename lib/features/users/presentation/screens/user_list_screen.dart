@@ -1,3 +1,6 @@
+// lib/features/users/presentation/screens/user_list_screen.dart
+
+import 'package:talksy/core/theme/app_colors.dart';
 import 'package:talksy/features/chat/presentation/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,17 +38,22 @@ class _UsersListScreenState extends State<UsersListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New Chat'), elevation: 0),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text('New Chat'),
+        elevation: 0,
+        backgroundColor: AppColors.surface,
+      ),
       body: Column(
         children: [
           // Search bar
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: AppColors.cardShadow,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -55,13 +63,13 @@ class _UsersListScreenState extends State<UsersListScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search users...',
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF0084FF)),
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: AppColors.background,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 15,
@@ -78,7 +86,9 @@ class _UsersListScreenState extends State<UsersListScreen> {
             child: BlocBuilder<UsersBloc, UsersState>(
               builder: (context, state) {
                 if (state.status == UsersStatus.loading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
                 }
 
                 if (state.status == UsersStatus.error) {
@@ -89,13 +99,13 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         Icon(
                           Icons.error_outline,
                           size: 64,
-                          color: Colors.grey.shade400,
+                          color: AppColors.textSecondary.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           state.errorMessage ?? 'Failed to load users',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
                             fontSize: 16,
                           ),
                         ),
@@ -112,13 +122,13 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         Icon(
                           Icons.people_outline,
                           size: 64,
-                          color: Colors.grey.shade400,
+                          color: AppColors.textSecondary.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        const Text(
                           'No users found',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: AppColors.textSecondary,
                             fontSize: 16,
                           ),
                         ),
@@ -130,7 +140,8 @@ class _UsersListScreenState extends State<UsersListScreen> {
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: state.users.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.divider),
                   itemBuilder: (context, index) {
                     final user = state.users[index];
                     return ListTile(
@@ -140,19 +151,30 @@ class _UsersListScreenState extends State<UsersListScreen> {
                       ),
                       leading: Stack(
                         children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: const Color(
-                              0xFF0084FF,
-                            ).withValues(alpha: 0.1),
-                            child: Text(
-                              user.displayName.isNotEmpty
-                                  ? user.displayName[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0084FF),
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryShadow,
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                user.displayName.isNotEmpty
+                                    ? user.displayName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -164,10 +186,10 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                 width: 16,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF44BBA4),
+                                  color: AppColors.secondary,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: AppColors.surface,
                                     width: 2,
                                   ),
                                 ),
@@ -180,12 +202,13 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
                         user.email,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -195,7 +218,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0084FF),
+                          gradient: AppColors.primaryGradient,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
@@ -221,7 +244,6 @@ class _UsersListScreenState extends State<UsersListScreen> {
   }
 
   void _startChat(BuildContext context, String userId, String userName) {
-    Navigator.pop(context); // Close users list
     Navigator.push(
       context,
       MaterialPageRoute(

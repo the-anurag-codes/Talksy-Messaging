@@ -1,6 +1,9 @@
+// lib/features/chat/presentation/screens/chat_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:talksy/core/theme/app_colors.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
@@ -47,6 +50,8 @@ class _ChatScreenState extends State<ChatScreen> {
         ChatStarted(
           userId: authState.user!.id,
           otherUserId: widget.otherUserId,
+          userName: authState.user!.displayName,
+          otherUserName: widget.otherUserName,
         ),
       );
     }
@@ -75,111 +80,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
-      appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_rounded,
-            color: Colors.black,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            // Avatar with gradient
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF0084FF),
-                    const Color(0xFF0084FF).withOpacity(0.7),
-                  ],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  widget.otherUserName.isNotEmpty
-                      ? widget.otherUserName[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.otherUserName,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  BlocBuilder<ChatBloc, ChatState>(
-                    builder: (context, state) {
-                      if (state.isOtherUserTyping) {
-                        return const Text(
-                          'typing...',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF0084FF),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        );
-                      }
-                      return Text(
-                        'Active now',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.videocam_rounded,
-              color: Color(0xFF0084FF),
-              size: 26,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.call_rounded,
-              color: Color(0xFF0084FF),
-              size: 24,
-            ),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
+      backgroundColor: AppColors.background,
+      appBar: _buildAppBar(),
       body: Column(
         children: [
           // Messages list
@@ -191,17 +93,37 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (mounted) _scrollToBottom();
                   });
                 }
+
+                // Show error snackbar
+                if (state.errorMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.errorMessage!),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                    ),
+                  );
+                }
               },
               builder: (context, chatState) {
                 final authState = context.watch<AuthBloc>().state;
 
                 if (authState.user == null) {
-                  return const Center(child: Text('Not authenticated'));
+                  return const Center(
+                    child: Text(
+                      'Not authenticated',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  );
                 }
 
                 if (chatState.status == ChatStatus.loading) {
                   return Container(
-                    color: const Color(0xFFF7F8FA),
+                    color: AppColors.background,
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -212,7 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: CircularProgressIndicator(
                               strokeWidth: 3,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                const Color(0xFF0084FF).withOpacity(0.7),
+                                AppColors.primary.withValues(alpha: 0.7),
                               ),
                             ),
                           ),
@@ -248,8 +170,8 @@ class _ChatScreenState extends State<ChatScreen> {
           BlocBuilder<ChatBloc, ChatState>(
             builder: (context, state) {
               if (state.isOtherUserTyping) {
-                return Padding(
-                  padding: const EdgeInsets.only(left: 20, bottom: 8),
+                return const Padding(
+                  padding: EdgeInsets.only(left: 20, bottom: 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: TypingIndicator(),
@@ -263,10 +185,10 @@ class _ChatScreenState extends State<ChatScreen> {
           // Message input
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: AppColors.cardShadow,
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -319,9 +241,113 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      elevation: 0,
+      backgroundColor: AppColors.surface,
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_rounded,
+          color: AppColors.textPrimary,
+          size: 20,
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      titleSpacing: 0,
+      title: Row(
+        children: [
+          // Avatar with gradient
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                widget.otherUserName.isNotEmpty
+                    ? widget.otherUserName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.otherUserName,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                BlocBuilder<ChatBloc, ChatState>(
+                  builder: (context, state) {
+                    if (state.isOtherUserTyping) {
+                      return const Text(
+                        'typing...',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.primary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      );
+                    }
+                    return const Text(
+                      'Active now',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(
+            Icons.videocam_rounded,
+            color: AppColors.primary,
+            size: 26,
+          ),
+          onPressed: () {
+            // TODO: Implement video call
+          },
+        ),
+        IconButton(
+          icon: const Icon(
+            Icons.call_rounded,
+            color: AppColors.primary,
+            size: 24,
+          ),
+          onPressed: () {
+            // TODO: Implement voice call
+          },
+        ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+
   Widget _buildEmptyState() {
     return Container(
-      color: const Color(0xFFF7F8FA),
+      color: AppColors.background,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -329,20 +355,13 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF0084FF).withOpacity(0.1),
-                    const Color(0xFF0084FF).withOpacity(0.05),
-                  ],
-                ),
+                gradient: AppColors.primaryGradientWithOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.waving_hand_rounded,
                 size: 64,
-                color: const Color(0xFF0084FF).withOpacity(0.6),
+                color: AppColors.primary.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),
@@ -351,13 +370,13 @@ class _ChatScreenState extends State<ChatScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Start the conversation',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
             ),
           ],
         ),

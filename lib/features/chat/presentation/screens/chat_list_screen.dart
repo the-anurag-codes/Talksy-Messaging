@@ -1,7 +1,8 @@
-import 'package:talksy/features/chat/presentation/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../users/presentation/bloc/user_bloc.dart';
@@ -13,6 +14,7 @@ import '../bloc/chat_list_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../domain/entities/chat_room_entity.dart';
+import 'chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -22,22 +24,37 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  bool _isInitialized = false;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
+    _initializeScreen();
+  }
+
+  Future<void> _initializeScreen() async {
     final authState = context.read<AuthBloc>().state;
-    if (authState.user != null) {
+
+    if (authState.status == AuthStatus.authenticated &&
+        authState.user != null) {
+      // Start loading chats
       context.read<ChatListBloc>().add(ChatListStarted(authState.user!.id));
 
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) {
-          setState(() {
-            _isInitialized = true;
-          });
-        }
-      });
+      // Wait minimum time for smooth transition
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    } else {
+      // If not authenticated, stop initializing immediately
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
     }
   }
 
@@ -46,7 +63,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state.status == AuthStatus.unauthenticated) {
-          // Navigate to login and remove all previous routes
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             Navigator.of(context).pushAndRemoveUntil(
@@ -57,145 +73,244 @@ class _ChatListScreenState extends State<ChatListScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          centerTitle: false,
-          title: const Text(
-            'Talksy',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-          ),
-          elevation: 0,
-          actions: [
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'logout') {
-                  _showLogoutDialog(context);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Color(0xFFE94560)),
-                      SizedBox(width: 12),
-                      Text(
-                        'Sign Out',
-                        style: TextStyle(color: Color(0xFFE94560)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        body: BlocBuilder<ChatListBloc, ChatListState>(
-          builder: (context, state) {
-            if (!_isInitialized && state.status == ChatListStatus.loading) {
-              return _buildLoadingState();
-            }
-
-            // Show empty state
-            if (state.chatRooms.isEmpty && _isInitialized) {
-              return _buildEmptyState(context);
-            }
-
-            return ListView.separated(
-              itemCount: state.chatRooms.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, indent: 88, color: Colors.grey.shade200),
-              itemBuilder: (context, index) {
-                final chatRoom = state.chatRooms[index];
-                return _ChatListItem(
-                  chatRoom: chatRoom,
-                  onTap: () => _navigateToChat(context, chatRoom),
-                );
-              },
-            );
-          },
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _navigateToUsersList(context),
-          backgroundColor: const Color(0xFF0084FF),
-          child: const Icon(Icons.edit_outlined),
-        ),
+        backgroundColor: Colors.white,
+        appBar: _buildAppBar(context),
+        body: _isInitializing ? _buildInitialLoading() : _buildChatList(),
+        floatingActionButton: _isInitializing ? null : _buildFAB(context),
       ),
     );
   }
 
-  Widget _buildLoadingState() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      backgroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: false,
+      title: const Text(
+        'Messages',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 32,
+          color: Colors.black,
+          letterSpacing: -0.5,
+        ),
+      ),
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded, color: Colors.black),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          offset: const Offset(0, 50),
+          elevation: 8,
+          onSelected: (value) {
+            if (value == 'logout') {
+              _showLogoutDialog(context);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.logout_rounded,
+                    color: Color(0xFFE94560),
+                    size: 22,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Sign Out',
+                    style: TextStyle(color: Color(0xFFE94560), fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildInitialLoading() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF0084FF).withValues(alpha: 0.2),
+                  const Color(0xFF0084FF).withValues(alpha: 0.1),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    const Color(0xFF0084FF).withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
           Text(
-            'Loading chats...',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+            'Loading your chats...',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildChatList() {
+    return BlocBuilder<ChatListBloc, ChatListState>(
+      builder: (context, state) {
+        if (state.chatRooms.isEmpty) {
+          return _buildEmptyState(context);
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: state.chatRooms.length,
+          separatorBuilder: (_, __) => Divider(
+            height: 1,
+            indent: 88,
+            endIndent: 16,
+            color: Colors.grey.shade100,
+          ),
+          itemBuilder: (context, index) {
+            final chatRoom = state.chatRooms[index];
+            return _ChatListItem(
+              chatRoom: chatRoom,
+              onTap: () => _navigateToChat(context, chatRoom),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(48.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(48),
               decoration: BoxDecoration(
-                color: const Color(0xFF0084FF).withValues(alpha: 0.1),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF0084FF).withValues(alpha: 0.1),
+                    const Color(0xFF00C6FF).withValues(alpha: 0.05),
+                  ],
+                ),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.forum_outlined,
+                Icons.chat_bubble_outline_rounded,
                 size: 80,
-                color: const Color(0xFF0084FF).withValues(alpha: 0.8),
+                color: const Color(0xFF0084FF).withValues(alpha: 0.6),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
             const Text(
-              'No conversations yet',
+              'No messages yet',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
+                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Start chatting with your friends and\ncolleagues',
+              'Start a conversation with\nyour friends and colleagues',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 17,
                 color: Colors.grey.shade600,
-                height: 1.5,
+                height: 1.6,
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 56),
             ElevatedButton.icon(
               onPressed: () => _navigateToUsersList(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Start New Chat'),
+              icon: const Icon(Icons.add_rounded, size: 24),
+              label: const Text(
+                'Start Chatting',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0084FF),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+                  horizontal: 40,
+                  vertical: 18,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 2,
+                elevation: 0,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFAB(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryShadow,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: FloatingActionButton.extended(
+        onPressed: () => _navigateToUsersList(context),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        icon: const Icon(Icons.edit_rounded, size: 22, color: Colors.white),
+        label: const Text(
+          'New',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
         ),
       ),
     );
@@ -239,13 +354,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out?',
+          style: TextStyle(fontSize: 16),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -255,13 +383,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFFE94560),
             ),
-            child: const Text('Sign Out'),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+// In chat_list_screen.dart, update the _ChatListItem class:
 
 class _ChatListItem extends StatelessWidget {
   final ChatRoomEntity chatRoom;
@@ -274,21 +407,34 @@ class _ChatListItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
-            // Avatar
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: const Color(0xFF0084FF).withValues(alpha: 0.1),
-              child: Text(
-                chatRoom.otherUserName.isNotEmpty
-                    ? chatRoom.otherUserName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF0084FF),
+            // Avatar with gradient
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryShadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  chatRoom.otherUserName.isNotEmpty
+                      ? chatRoom.otherUserName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -306,7 +452,8 @@ class _ChatListItem extends StatelessWidget {
                           chatRoom.otherUserName,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                            fontSize: 17,
+                            color: AppColors.textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -316,13 +463,16 @@ class _ChatListItem extends StatelessWidget {
                         Text(
                           _formatTime(chatRoom.lastMessageTime!),
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                            color: AppColors.textSecondary.withValues(
+                              alpha: 0.8,
+                            ),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Expanded(
@@ -332,32 +482,41 @@ class _ChatListItem extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: chatRoom.lastMessage != null
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade400,
-                            fontSize: 14,
+                                ? AppColors.textSecondary
+                                : AppColors.textSecondary.withValues(
+                                    alpha: 0.5,
+                                  ),
+                            fontSize: 15,
                           ),
                         ),
                       ),
-                      if (chatRoom.unreadCount > 0)
+                      if (chatRoom.unreadCount > 0) ...[
+                        const SizedBox(width: 8),
                         Container(
-                          margin: const EdgeInsets.only(left: 8),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 10,
+                            vertical: 5,
                           ),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF0084FF),
-                            shape: BoxShape.circle,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.badgeGradient,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            '${chatRoom.unreadCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                          constraints: const BoxConstraints(
+                            minWidth: 24,
+                            minHeight: 24,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${chatRoom.unreadCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ],
